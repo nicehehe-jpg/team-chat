@@ -5,7 +5,7 @@ import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 
 export function useSocket() {
-  const { addMessage, setTyping, fetchRooms } = useChatStore();
+  const { addMessage, setTyping, fetchRooms, updateReadStatus } = useChatStore();
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -29,11 +29,16 @@ export function useSocket() {
       fetchRooms();
     });
 
+    socket.on('message_read', ({ roomId, userId, readAt }: { roomId: string; userId: string; readAt: string }) => {
+      updateReadStatus(roomId, userId, readAt);
+    });
+
     return () => {
       socket.off('new_message');
       socket.off('typing_indicator');
       socket.off('user_online');
       socket.off('user_offline');
+      socket.off('message_read');
       disconnectSocket();
     };
   }, [user]);

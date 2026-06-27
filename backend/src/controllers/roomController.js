@@ -20,7 +20,7 @@ async function getRooms(req, res) {
         WHERE m.room_id = $2 AND m.created_at > rm.last_read_at AND m.sender_id != $1
       `, [req.user.userId, room.id]);
       const { rows: members } = await pool.query(`
-        SELECT u.id, u.name, u.avatar_url, u.status
+        SELECT u.id, u.name, u.avatar_url, u.status, rm.last_read_at
         FROM users u JOIN room_members rm ON rm.user_id = u.id
         WHERE rm.room_id = $1 AND u.id != $2
       `, [room.id, req.user.userId]);

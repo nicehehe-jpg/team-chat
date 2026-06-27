@@ -243,9 +243,21 @@ export default function ChatWindow() {
                   </div>
                 )}
 
-                <span style={{ fontSize: '11px', color: 'var(--t3)', padding: '0 2px' }}>
-                  {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '0 2px' }}>
+                  {isMine && (() => {
+                    const readers = (activeRoom?.members || []).filter(
+                      (m) => m.last_read_at && new Date(m.last_read_at) >= new Date(msg.created_at)
+                    );
+                    return readers.length > 0 ? (
+                      <span style={{ fontSize: '11px', color: 'var(--blue)', fontWeight: 600 }}>
+                        읽음 {readers.length}
+                      </span>
+                    ) : null;
+                  })()}
+                  <span style={{ fontSize: '11px', color: 'var(--t3)' }}>
+                    {format(new Date(msg.created_at), 'a h:mm', { locale: ko })}
+                  </span>
+                </div>
               </div>
             </div>
           );

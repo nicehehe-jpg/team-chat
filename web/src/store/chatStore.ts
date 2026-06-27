@@ -17,7 +17,7 @@ interface Room {
   name: string | null;
   last_message: { content: string; created_at: string; type: string } | null;
   unread_count: number;
-  members: Array<{ id: string; name: string; avatar_url: string | null; status: string }>;
+  members: Array<{ id: string; name: string; avatar_url: string | null; status: string; last_read_at: string | null }>;
 }
 
 interface ChatState {
@@ -32,6 +32,7 @@ interface ChatState {
   setTyping: (roomId: string, userId: string, isTyping: boolean) => void;
   createDirectRoom: (targetUserId: string) => Promise<string>;
   createGroupRoom: (name: string, memberIds: string[]) => Promise<string>;
+  updateReadStatus: (roomId: string, userId: string, readAt: string) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -90,5 +91,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { data } = await api.post('/rooms/group', { name, memberIds });
     await get().fetchRooms();
     return data.id;
+  },
+
+  updateReadStatus: (roomId, userId, readAt) => {
+    set((state) => ({
+      rooms: state.rooms.map((r) =>
+        r.id === roomId
+          ? {
+              ...r,
+              members: r.members.map((m) =>
+                m.id === userId ? { ...m, last_read_at: readAt } : m
+              ),
+            }
+          : r
+      ),
+    }));
   },
 }));
