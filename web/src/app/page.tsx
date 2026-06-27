@@ -24,11 +24,18 @@ export default function HomePage() {
     });
   }, []);
 
+  // 로그아웃 등으로 인증이 사라지면 로그인 페이지로 이동
+  useEffect(() => {
+    if (!isLoading && !user && !localStorage.getItem('accessToken')) {
+      router.replace('/login');
+    }
+  }, [user, isLoading]);
+
   useEffect(() => {
     if (user) fetchRooms();
   }, [user]);
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center',
