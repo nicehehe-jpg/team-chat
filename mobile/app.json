@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Team Chat",
+    "slug": "team-chat",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FEE500"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.teamchat.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FEE500"
+      },
+      "package": "com.teamchat.app",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        { "photosPermission": "사진 전송을 위해 갤러리 접근이 필요합니다" }
+      ]
+    ],
+    "scheme": "teamchat"
+  }
+}
