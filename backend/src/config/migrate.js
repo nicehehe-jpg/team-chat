@@ -41,6 +41,8 @@ async function migrate() {
 
       CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id, created_at);
       CREATE INDEX IF NOT EXISTS idx_room_members_user ON room_members(user_id);
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status_message TEXT;
     `);
     console.log('Migration completed: Supabase PostgreSQL');
   } finally {

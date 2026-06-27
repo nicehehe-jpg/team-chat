@@ -7,6 +7,7 @@ interface User {
   name: string;
   avatar_url: string | null;
   status: string;
+  status_message?: string | null;
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
   logout: () => void;
   fetchMe: () => Promise<void>;
   updateAvatar: (avatarUrl: string) => Promise<void>;
+  updateStatusMessage: (message: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -45,6 +47,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   updateAvatar: async (avatarUrl: string) => {
     const { data } = await api.put('/users/me', { avatar_url: avatarUrl });
+    set({ user: data });
+  },
+
+  updateStatusMessage: async (message: string) => {
+    const { data } = await api.put('/users/me', { status_message: message });
     set({ user: data });
   },
 

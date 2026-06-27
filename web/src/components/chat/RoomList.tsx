@@ -35,7 +35,7 @@ function Avatar({ name, size = 44, color = 'var(--blue-bg)', textColor = 'var(--
 
 export default function RoomList() {
   const { rooms, activeRoomId, setActiveRoom, fetchMessages, createDirectRoom, createGroupRoom } = useChatStore();
-  const { user, logout, updateAvatar } = useAuthStore();
+  const { user, logout, updateAvatar, updateStatusMessage } = useAuthStore();
   const [users, setUsers] = useState<any[]>([]);
   const [modal, setModal] = useState<ModalType>('none');
   const [groupName, setGroupName] = useState('');
@@ -47,6 +47,8 @@ export default function RoomList() {
   const [profileUser, setProfileUser] = useState<any | null>(null);
   const [renameUser, setRenameUser] = useState<any | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [statusValue, setStatusValue] = useState('');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -202,23 +204,57 @@ export default function RoomList() {
       {/* 친구 목록 */}
       {activeTab === 'friends' && (
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {/* 내 프로필 (클릭해서 사진 변경) */}
+          {/* 내 프로필 */}
           <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-          <div onClick={() => avatarInputRef.current?.click()} title="클릭해서 프로필 사진 변경"
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', borderBottom: '1px solid var(--line)' }}>
+            <div
+              onClick={() => avatarInputRef.current?.click()}
+              title="클릭해서 프로필 사진 변경"
+              style={{ position: 'relative', flexShrink: 0, cursor: 'pointer' }}
+            >
               <Avatar name={user?.name} size={46} src={user?.avatar_url} />
               {avatarUploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>⏳</div>}
               <span style={{ position: 'absolute', bottom: 1, right: 1, width: '11px', height: '11px', borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--card)' }} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{user?.name}</p>
-              <p style={{ fontSize: '12px', color: 'var(--green)', fontWeight: 600 }}>● 온라인 · 사진 변경</p>
+              {editingStatus ? (
+                <input
+                  autoFocus
+                  value={statusValue}
+                  maxLength={60}
+                  onChange={e => setStatusValue(e.target.value)}
+                  onBlur={async () => { await updateStatusMessage(statusValue); setEditingStatus(false); }}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter') { await updateStatusMessage(statusValue); setEditingStatus(false); }
+                    if (e.key === 'Escape') setEditingStatus(false);
+                  }}
+                  placeholder="상태메시지 입력"
+                  style={{
+                    width: '100%', border: 'none', borderBottom: '1px solid var(--blue)',
+                    outline: 'none', fontSize: '12px', color: 'var(--t2)', padding: '1px 0',
+                    background: 'transparent',
+                  }}
+                />
+              ) : (
+                <p
+                  onClick={() => { setStatusValue(user?.status_message || ''); setEditingStatus(true); }}
+                  title="클릭해서 상태메시지 변경"
+                  style={{
+                    fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                    color: user?.status_message ? 'var(--t2)' : 'var(--t3)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}
+                >
+                  {user?.status_message || '✏️ 상태메시지 입력'}
+                </p>
+              )}
             </div>
-            <span style={{ fontSize: '13px', color: 'var(--t3)' }}>📷</span>
+            <span
+              onClick={() => avatarInputRef.current?.click()}
+              title="프로필 사진 변경"
+              style={{ fontSize: '13px', color: 'var(--t3)', cursor: 'pointer' }}
+            >📷</span>
           </div>
 
           {/* 팀원 목록 */}
@@ -253,10 +289,16 @@ export default function RoomList() {
                       border: '2px solid var(--card)',
                     }} />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
                     <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{displayNameOf(u)}</p>
-                    <p style={{ fontSize: '12px', color: u.status === 'online' ? 'var(--green)' : 'var(--t3)', fontWeight: 500 }}>
-                      {u.status === 'online' ? '● 온라인' : '○ 오프라인'}
+                    <p style={{
+                      fontSize: '12px', fontWeight: 500,
+                      color: u.status_message ? 'var(--t3)' : (u.status === 'online' ? 'var(--green)' : 'var(--t3)'),
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {u.status_message
+                        ? u.status_message
+                        : (u.status === 'online' ? '● 온라인' : '○ 오프라인')}
                     </p>
                   </div>
                 </button>
@@ -511,6 +553,11 @@ export default function RoomList() {
               <p style={{ fontSize: '13px', color: profileUser.status === 'online' ? 'var(--green)' : 'var(--t3)', fontWeight: 600 }}>
                 {profileUser.status === 'online' ? '● 온라인' : '○ 오프라인'}
               </p>
+              {profileUser.status_message && (
+                <p style={{ fontSize: '13.5px', color: 'var(--t1)', marginTop: '10px', fontWeight: 500 }}>
+                  “{profileUser.status_message}”
+                </p>
+              )}
               {profileUser.email && (
                 <p style={{ fontSize: '12px', color: 'var(--t3)', marginTop: '6px' }}>{profileUser.email}</p>
               )}
