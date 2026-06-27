@@ -41,6 +41,7 @@ export default function RoomList() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'friends' | 'chat'>('friends');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,57 +106,113 @@ export default function RoomList() {
       flexDirection: 'column', height: '100vh',
     }}>
       {/* 상단 헤더 */}
-      <div style={{ padding: '20px 20px 12px', borderBottom: '1px solid var(--line)' }}>
+      <div style={{ padding: '20px 20px 0', borderBottom: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '10px',
               background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-            }}>💬</div>
-            <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--t1)' }}>채팅</span>
+            }}>{activeTab === 'friends' ? '👤' : '💬'}</div>
+            <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--t1)' }}>{activeTab === 'friends' ? '친구' : '채팅'}</span>
           </div>
           <div style={{ display: 'flex', gap: '4px' }}>
-            <button onClick={() => openModal('direct')} title="1:1 채팅" style={iconBtnStyle}>💬</button>
-            <button onClick={() => openModal('group')} title="그룹 채팅" style={iconBtnStyle}>👥</button>
+            {activeTab === 'chat' && <>
+              <button onClick={() => openModal('direct')} title="1:1 채팅" style={iconBtnStyle}>💬</button>
+              <button onClick={() => openModal('group')} title="그룹 채팅" style={iconBtnStyle}>👥</button>
+            </>}
             <button onClick={() => window.open('https://nicehehe-jpg.github.io/general-affiairs-for-soosan/', '_blank')} title="총무 관리 시스템" style={iconBtnStyle}>📋</button>
             <button onClick={logout} title="로그아웃" style={iconBtnStyle}>↩</button>
           </div>
         </div>
 
-        {/* 내 프로필 */}
-        <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
-        <div
-          onClick={() => avatarInputRef.current?.click()}
-          title="클릭해서 프로필 사진 변경"
-          style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            padding: '10px 12px', background: 'var(--bg)', borderRadius: '12px',
-            cursor: 'pointer', transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'var(--blue-bg)')}
-          onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg)')}
-        >
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <Avatar name={user?.name} size={36} src={user?.avatar_url} />
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: 36 * 0.32,
-              background: avatarUploading ? 'rgba(0,0,0,0.4)' : 'rgba(0,0,0,0)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', transition: 'background 0.15s',
+        {/* 탭 */}
+        <div style={{ display: 'flex', gap: '0' }}>
+          {(['friends', 'chat'] as const).map((tab) => (
+            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+              flex: 1, padding: '10px 0', border: 'none', background: 'transparent',
+              fontSize: '13.5px', fontWeight: 700, cursor: 'pointer',
+              color: activeTab === tab ? 'var(--blue)' : 'var(--t3)',
+              borderBottom: activeTab === tab ? '2px solid var(--blue)' : '2px solid transparent',
+              transition: 'all 0.15s',
             }}>
-              {avatarUploading && '⏳'}
-            </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--t1)' }}>{user?.name}</p>
-            <p style={{ fontSize: '11.5px', color: 'var(--green)', fontWeight: 600 }}>● 온라인 · 사진 변경</p>
-          </div>
-          <span style={{ fontSize: '13px', color: 'var(--t3)' }}>📷</span>
+              {tab === 'friends' ? '👤 친구' : '💬 채팅'}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* 친구 목록 */}
+      {activeTab === 'friends' && (
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {/* 내 프로필 (클릭해서 사진 변경) */}
+          <input ref={avatarInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarUpload} />
+          <div onClick={() => avatarInputRef.current?.click()} title="클릭해서 프로필 사진 변경"
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 20px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Avatar name={user?.name} size={46} src={user?.avatar_url} />
+              {avatarUploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>⏳</div>}
+              <span style={{ position: 'absolute', bottom: 1, right: 1, width: '11px', height: '11px', borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--card)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{user?.name}</p>
+              <p style={{ fontSize: '12px', color: 'var(--green)', fontWeight: 600 }}>● 온라인 · 사진 변경</p>
+            </div>
+            <span style={{ fontSize: '13px', color: 'var(--t3)' }}>📷</span>
+          </div>
+
+          {/* 팀원 목록 */}
+          {users.length > 0 && (
+            <>
+              <div style={{ padding: '10px 20px 6px', fontSize: '11.5px', fontWeight: 700, color: 'var(--t3)', background: 'var(--bg)' }}>
+                팀원 {users.length}명
+              </div>
+              {users.map((u) => (
+                <button key={u.id} onClick={async () => {
+                  const roomId = await createDirectRoom(u.id);
+                  await fetchMessages(roomId);
+                  setActiveRoom(roomId);
+                  setActiveTab('chat');
+                }} style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 20px', background: 'transparent', border: 'none',
+                  cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <Avatar name={u.name} size={44} src={u.avatar_url} />
+                    <span style={{
+                      position: 'absolute', bottom: 1, right: 1,
+                      width: '11px', height: '11px', borderRadius: '50%',
+                      background: u.status === 'online' ? 'var(--green)' : 'var(--t3)',
+                      border: '2px solid var(--card)',
+                    }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{u.name}</p>
+                    <p style={{ fontSize: '12px', color: u.status === 'online' ? 'var(--green)' : 'var(--t3)', fontWeight: 500 }}>
+                      {u.status === 'online' ? '● 온라인' : '○ 오프라인'}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+          {users.length === 0 && (
+            <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>👤</div>
+              <p style={{ fontSize: '14px', color: 'var(--t3)' }}>등록된 팀원이 없습니다</p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 채팅방 목록 */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {activeTab === 'chat' && (<div style={{ flex: 1, overflowY: 'auto' }}>
         {rooms.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>💬</div>
@@ -232,7 +289,7 @@ export default function RoomList() {
             );
           })
         )}
-      </div>
+      </div>)}
 
       {/* 모달 */}
       {modal !== 'none' && (
