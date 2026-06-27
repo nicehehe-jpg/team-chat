@@ -21,6 +21,7 @@ export default function ChatWindow() {
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const typingTimeout = useRef<NodeJS.Timeout>();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -146,7 +147,7 @@ export default function ChatWindow() {
       }}>
         {isMobile && (
           <button
-            onClick={() => setActiveRoom(null)}
+            onClick={() => setShowExitConfirm(true)}
             title="목록으로"
             style={{
               flexShrink: 0, width: '32px', height: '32px', border: 'none',
@@ -377,6 +378,58 @@ export default function ChatWindow() {
           </button>
         </div>
       </div>
+
+      {/* 채팅 종료 확인 모달 */}
+      {showExitConfirm && (
+        <div
+          onClick={() => setShowExitConfirm(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.35)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'var(--card)', borderRadius: '20px',
+              width: '100%', maxWidth: '320px', overflow: 'hidden',
+              boxShadow: 'var(--shadow-lg)',
+            }}
+          >
+            <div style={{ padding: '28px 24px 22px', textAlign: 'center' }}>
+              <div style={{
+                width: '52px', height: '52px', borderRadius: '16px', margin: '0 auto 14px',
+                background: 'var(--blue-bg)', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '24px',
+              }}>💬</div>
+              <p style={{ fontSize: '16px', fontWeight: 700, color: 'var(--t1)', marginBottom: '6px' }}>
+                채팅을 종료하시겠습니까?
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--t3)' }}>
+                목록으로 돌아갑니다
+              </p>
+            </div>
+            <div style={{ display: 'flex', borderTop: '1px solid var(--line)' }}>
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                style={{
+                  flex: 1, padding: '15px 0', border: 'none', background: 'transparent',
+                  fontSize: '15px', fontWeight: 600, color: 'var(--t2)', cursor: 'pointer',
+                  borderRight: '1px solid var(--line)',
+                }}
+              >아니요</button>
+              <button
+                onClick={() => { setShowExitConfirm(false); setActiveRoom(null); }}
+                style={{
+                  flex: 1, padding: '15px 0', border: 'none', background: 'transparent',
+                  fontSize: '15px', fontWeight: 700, color: 'var(--blue)', cursor: 'pointer',
+                }}
+              >예</button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
