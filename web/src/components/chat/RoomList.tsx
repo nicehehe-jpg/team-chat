@@ -33,6 +33,35 @@ function Avatar({ name, size = 44, color = 'var(--blue-bg)', textColor = 'var(--
   );
 }
 
+function SearchBar({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      background: 'var(--bg)', borderRadius: '12px', padding: '9px 12px',
+    }}>
+      <span style={{ fontSize: '14px', color: 'var(--t3)', flexShrink: 0 }}>🔍</span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          flex: 1, border: 'none', outline: 'none', background: 'transparent',
+          fontSize: '13.5px', color: 'var(--t1)', minWidth: 0,
+        }}
+      />
+      {value && (
+        <button
+          onClick={() => onChange('')}
+          style={{
+            border: 'none', background: 'transparent', cursor: 'pointer',
+            color: 'var(--t3)', fontSize: '14px', flexShrink: 0, padding: 0, lineHeight: 1,
+          }}
+        >✕</button>
+      )}
+    </div>
+  );
+}
+
 export default function RoomList() {
   const { rooms, activeRoomId, setActiveRoom, fetchMessages, createDirectRoom, createSelfRoom, createGroupRoom } = useChatStore();
   const { user, logout, updateAvatar, updateStatusMessage, updateProfile } = useAuthStore();
@@ -49,6 +78,7 @@ export default function RoomList() {
   const [renameValue, setRenameValue] = useState('');
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusValue, setStatusValue] = useState('');
+  const [listSearch, setListSearch] = useState('');
   const [showMyMenu, setShowMyMenu] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
@@ -199,7 +229,7 @@ export default function RoomList() {
         {/* 탭 */}
         <div style={{ display: 'flex', gap: '0' }}>
           {(['friends', 'chat'] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            <button key={tab} onClick={() => { setActiveTab(tab); setListSearch(''); }} style={{
               flex: 1, padding: '10px 0', border: 'none', background: 'transparent',
               fontSize: '13.5px', fontWeight: 700, cursor: 'pointer',
               color: activeTab === tab ? 'var(--blue)' : 'var(--t3)',
@@ -302,13 +332,23 @@ export default function RoomList() {
             >📷</span>
           </div>
 
+          {/* 친구 검색 */}
+          <div style={{ padding: '10px 16px' }}>
+            <SearchBar value={listSearch} onChange={setListSearch} placeholder="이름 검색" />
+          </div>
+
           {/* 팀원 목록 */}
-          {users.length > 0 && (
+          {(() => {
+            const q = listSearch.trim().toLowerCase();
+            const filtered = q
+              ? users.filter(u => displayNameOf(u).toLowerCase().includes(q) || (u.status_message || '').toLowerCase().includes(q))
+              : users;
+            return filtered.length > 0 ? (
             <>
               <div style={{ padding: '10px 20px 6px', fontSize: '11.5px', fontWeight: 700, color: 'var(--t3)', background: 'var(--bg)' }}>
-                팀원 {users.length}명
+                팀원 {filtered.length}명
               </div>
-              {users.map((u) => (
+              {filtered.map((u) => (
                 <button key={u.id}
                   onClick={() => openChatWith(u.id)}
                   onContextMenu={(e) => {
@@ -349,26 +389,50 @@ export default function RoomList() {
                 </button>
               ))}
             </>
-          )}
-          {users.length === 0 && (
-            <div style={{ padding: '48px 24px', textAlign: 'center' }}>
-              <div style={{ fontSize: '36px', marginBottom: '12px' }}>👤</div>
-              <p style={{ fontSize: '14px', color: 'var(--t3)' }}>등록된 팀원이 없습니다</p>
-            </div>
-          )}
+            ) : (
+              <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                <div style={{ fontSize: '36px', marginBottom: '12px' }}>{q ? '🔍' : '👤'}</div>
+                <p style={{ fontSize: '14px', color: 'var(--t3)' }}>
+                  {q ? '검색 결과가 없습니다' : '등록된 팀원이 없습니다'}
+                </p>
+              </div>
+            );
+          })()}
         </div>
       )}
 
       {/* 채팅방 목록 */}
       {activeTab === 'chat' && (<div style={{ flex: 1, overflowY: 'auto' }}>
-        {rooms.length === 0 ? (
+        {/* 채팅방 검색 */}
+        <div style={{ padding: '10px 16px' }}>
+          <SearchBar value={listSearch} onChange={setListSearch} placeholder="채팅방, 참여자 검색" />
+        </div>
+        {(() => {
+          const q = listSearch.trim().toLowerCase();
+          const roomName = (room: any) => {
+            const other = room.members?.[0];
+            const isSelf = room.type === 'direct' && (!room.members || room.members.length === 0);
+            return isSelf ? `${user?.name} (나)` : (room.type === 'direct' ? (other?.name || '') : (room.name || ''));
+          };
+          const filteredRooms = q
+            ? rooms.filter(r =>
+                roomName(r).toLowerCase().includes(q) ||
+                (r.members || []).some((m: any) => (m.name || '').toLowerCase().includes(q)) ||
+                (r.last_message?.content || '').toLowerCase().includes(q))
+            : rooms;
+          return rooms.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: '36px', marginBottom: '12px' }}>💬</div>
             <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--t2)', marginBottom: '4px' }}>채팅방이 없습니다</p>
             <p style={{ fontSize: '12.5px', color: 'var(--t3)' }}>위 버튼으로 대화를 시작해보세요</p>
           </div>
+        ) : filteredRooms.length === 0 ? (
+          <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '36px', marginBottom: '12px' }}>🔍</div>
+            <p style={{ fontSize: '14px', color: 'var(--t3)' }}>검색 결과가 없습니다</p>
+          </div>
         ) : (
-          rooms.map((room) => {
+          filteredRooms.map((room) => {
             const other = room.members?.[0];
             const isSelfRoom = room.type === 'direct' && (!room.members || room.members.length === 0);
             const displayName = isSelfRoom ? `${user?.name} (나)` : (room.type === 'direct' ? other?.name : room.name);
@@ -437,7 +501,8 @@ export default function RoomList() {
               </button>
             );
           })
-        )}
+        );
+        })()}
       </div>)}
 
       {/* 모달 */}
