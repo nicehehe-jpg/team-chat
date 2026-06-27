@@ -217,7 +217,11 @@ export default function RoomList() {
               <span style={{ position: 'absolute', bottom: 1, right: 1, width: '11px', height: '11px', borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--card)' }} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{user?.name}</p>
+              <p
+                onClick={() => setProfileUser(user)}
+                title="내 프로필 보기"
+                style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px', cursor: 'pointer', display: 'inline-block' }}
+              >{user?.name}</p>
               {editingStatus ? (
                 <input
                   autoFocus
@@ -563,13 +567,32 @@ export default function RoomList() {
               )}
             </div>
             <div style={{ padding: '14px', display: 'flex', gap: '8px' }}>
-              <button
-                onClick={() => { openChatWith(profileUser.id); setProfileUser(null); }}
-                style={{
-                  flex: 1, padding: '13px', borderRadius: '12px', border: 'none',
-                  background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
-                }}
-              >💬 채팅하기</button>
+              {profileUser.id === user?.id ? (
+                <>
+                  <button
+                    onClick={() => { setProfileUser(null); avatarInputRef.current?.click(); }}
+                    style={{
+                      flex: 1, padding: '13px', borderRadius: '12px', border: '1px solid var(--line)',
+                      background: 'transparent', color: 'var(--t2)', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+                    }}
+                  >📷 사진 변경</button>
+                  <button
+                    onClick={() => { setStatusValue(user?.status_message || ''); setEditingStatus(true); setProfileUser(null); }}
+                    style={{
+                      flex: 1, padding: '13px', borderRadius: '12px', border: 'none',
+                      background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+                    }}
+                  >✏️ 상태메시지</button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { openChatWith(profileUser.id); setProfileUser(null); }}
+                  style={{
+                    flex: 1, padding: '13px', borderRadius: '12px', border: 'none',
+                    background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                  }}
+                >💬 채팅하기</button>
+              )}
             </div>
           </div>
         </div>
