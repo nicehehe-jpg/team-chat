@@ -8,13 +8,15 @@ interface User {
   avatar_url: string | null;
   status: string;
   status_message?: string | null;
+  role?: string;
+  approved?: boolean;
 }
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<{ pending?: boolean; message?: string }>;
   logout: () => void;
   fetchMe: () => Promise<void>;
   updateAvatar: (avatarUrl: string) => Promise<void>;
@@ -35,9 +37,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   register: async (email, password, name) => {
     const { data } = await api.post('/auth/register', { email, password, name });
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
-    set({ user: data.user });
+    // 승인 대기 — 토큰 없음
+    if (data.pending) return { pending: true, message: data.message };
+    if (data.accessToken) {
+      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      set({ user: data.user });
+    }
+    return {};
   },
 
   logout: () => {

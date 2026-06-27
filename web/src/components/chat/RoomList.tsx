@@ -5,6 +5,7 @@ import { ko } from 'date-fns/locale';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import AdminPanel from './AdminPanel';
 import api from '@/lib/api';
 
 type ModalType = 'none' | 'direct' | 'group';
@@ -80,6 +81,7 @@ export default function RoomList() {
   const [statusValue, setStatusValue] = useState('');
   const [listSearch, setListSearch] = useState('');
   const [showMyMenu, setShowMyMenu] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [editProfile, setEditProfile] = useState(false);
   const [editName, setEditName] = useState('');
   const [editStatus, setEditStatus] = useState('');
@@ -221,6 +223,9 @@ export default function RoomList() {
               <button onClick={() => openModal('direct')} title="1:1 채팅" style={iconBtnStyle}>💬</button>
               <button onClick={() => openModal('group')} title="그룹 채팅" style={iconBtnStyle}>👥</button>
             </>}
+            {user?.role === 'admin' && (
+              <button onClick={() => setShowAdmin(true)} title="관리자 — 계정 관리" style={iconBtnStyle}>⚙️</button>
+            )}
             <button onClick={() => window.open('https://nicehehe-jpg.github.io/general-affiairs-for-soosan/', '_blank')} title="총무 관리 시스템" style={iconBtnStyle}>📋</button>
             <button onClick={logout} title="로그아웃" style={iconBtnStyle}>↩</button>
           </div>
@@ -704,6 +709,9 @@ export default function RoomList() {
           </div>
         </div>
       )}
+
+      {/* 관리자 패널 */}
+      {showAdmin && <AdminPanel onClose={() => setShowAdmin(false)} myId={user?.id} />}
 
       {/* 내 프로필 편집 모달 */}
       {editProfile && (

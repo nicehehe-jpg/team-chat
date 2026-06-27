@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [form, setForm] = useState({ email: '', password: '', name: '' });
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuthStore();
   const router = useRouter();
@@ -14,10 +15,17 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
     try {
       if (isRegister) {
-        await register(form.email, form.password, form.name);
+        const result = await register(form.email, form.password, form.name);
+        if (result.pending) {
+          setNotice(result.message || '가입 신청 완료. 관리자 승인 후 이용할 수 있습니다.');
+          setIsRegister(false);
+          setForm({ email: form.email, password: '', name: '' });
+          return;
+        }
       } else {
         await login(form.email, form.password);
       }
@@ -135,6 +143,16 @@ export default function LoginPage() {
               fontSize: '13px', fontWeight: 600,
             }}>
               {error}
+            </div>
+          )}
+
+          {notice && (
+            <div style={{
+              background: 'var(--green-bg)', color: 'var(--green)',
+              borderRadius: '10px', padding: '10px 14px',
+              fontSize: '13px', fontWeight: 600,
+            }}>
+              {notice}
             </div>
           )}
 

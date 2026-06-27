@@ -3,7 +3,8 @@ const pool = require('../config/db');
 async function getUsers(req, res) {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, avatar_url, status, status_message FROM users WHERE id != $1 ORDER BY name',
+      `SELECT id, email, name, avatar_url, status, status_message FROM users
+       WHERE id != $1 AND approved = true AND role != 'admin' ORDER BY name`,
       [req.user.userId]
     );
     res.json(result.rows);
@@ -16,7 +17,7 @@ async function getUsers(req, res) {
 async function getMe(req, res) {
   try {
     const result = await pool.query(
-      'SELECT id, email, name, avatar_url, status, status_message, created_at FROM users WHERE id = $1',
+      'SELECT id, email, name, avatar_url, status, status_message, role, approved, created_at FROM users WHERE id = $1',
       [req.user.userId]
     );
     if (!result.rows[0]) return res.status(404).json({ message: '사용자를 찾을 수 없습니다' });

@@ -16,12 +16,12 @@ async function register(req, res) {
     if (exists.rows.length) return res.status(409).json({ message: '이미 사용 중인 이메일입니다' });
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name, avatar_url, status, created_at',
+    await pool.query(
+      'INSERT INTO users (email, password_hash, name, approved) VALUES ($1, $2, $3, false)',
       [email, passwordHash, name]
     );
-    const user = result.rows[0];
-    res.status(201).json({ user, ...generateTokens(user.id) });
+    // 승인 대기 — 토큰 발급하지 않음
+    res.status(201).json({ pending: true, message: '가입 신청이 완료되었습니다. 관리자 승인 후 이용할 수 있습니다.' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });
@@ -38,6 +38,10 @@ async function login(req, res) {
 
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) return res.status(401).json({ message: '이메일 또는 비밀번호가 올바르지 않습니다' });
+
+    if (!user.approved && user.role !== 'admin') {
+      return res.status(403).json({ message: '관리자 승인 대기 중입니다. 승인 후 이용할 수 있습니다.' });
+    }
 
     const { password_hash, ...userOut } = user;
     res.json({ user: userOut, ...generateTokens(user.id) });
