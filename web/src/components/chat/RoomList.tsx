@@ -43,8 +43,52 @@ export default function RoomList() {
   const [search, setSearch] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'friends' | 'chat'>('friends');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; user: any } | null>(null);
+  const [profileUser, setProfileUser] = useState<any | null>(null);
+  const [renameUser, setRenameUser] = useState<any | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // 별명 로드 (본인에게만 보이는 친구 이름)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('friend_nicknames');
+      if (saved) setNicknames(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  const displayNameOf = (u: any) => nicknames[u.id] || u.name;
+
+  const saveNickname = (userId: string, nickname: string) => {
+    setNicknames((prev) => {
+      const next = { ...prev };
+      if (nickname.trim()) next[userId] = nickname.trim();
+      else delete next[userId];
+      localStorage.setItem('friend_nicknames', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const openChatWith = async (userId: string) => {
+    const roomId = await createDirectRoom(userId);
+    await fetchMessages(roomId);
+    setActiveRoom(roomId);
+    setActiveTab('chat');
+  };
+
+  // 컨텍스트 메뉴 바깥 클릭 시 닫기
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [ctxMenu]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -184,12 +228,15 @@ export default function RoomList() {
                 팀원 {users.length}명
               </div>
               {users.map((u) => (
-                <button key={u.id} onClick={async () => {
-                  const roomId = await createDirectRoom(u.id);
-                  await fetchMessages(roomId);
-                  setActiveRoom(roomId);
-                  setActiveTab('chat');
-                }} style={{
+                <button key={u.id}
+                  onClick={() => openChatWith(u.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    const menuH = 150;
+                    const y = e.clientY + menuH > window.innerHeight ? e.clientY - menuH : e.clientY;
+                    setCtxMenu({ x: Math.min(e.clientX, window.innerWidth - 170), y, user: u });
+                  }}
+                  style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '10px 20px', background: 'transparent', border: 'none',
                   cursor: 'pointer', textAlign: 'left', transition: 'background 0.12s',
@@ -198,7 +245,7 @@ export default function RoomList() {
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <Avatar name={u.name} size={44} src={u.avatar_url} />
+                    <Avatar name={displayNameOf(u)} size={44} src={u.avatar_url} />
                     <span style={{
                       position: 'absolute', bottom: 1, right: 1,
                       width: '11px', height: '11px', borderRadius: '50%',
@@ -207,7 +254,7 @@ export default function RoomList() {
                     }} />
                   </div>
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{u.name}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px' }}>{displayNameOf(u)}</p>
                     <p style={{ fontSize: '12px', color: u.status === 'online' ? 'var(--green)' : 'var(--t3)', fontWeight: 500 }}>
                       {u.status === 'online' ? '● 온라인' : '○ 오프라인'}
                     </p>
@@ -410,6 +457,116 @@ export default function RoomList() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 친구 우클릭 컨텍스트 메뉴 */}
+      {ctxMenu && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'fixed', top: ctxMenu.y, left: ctxMenu.x, zIndex: 300,
+            background: 'var(--card)', borderRadius: '12px', overflow: 'hidden',
+            boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)',
+            width: '160px', padding: '6px',
+          }}
+        >
+          {[
+            { label: '💬  채팅하기', action: () => openChatWith(ctxMenu.user.id) },
+            { label: '👤  프로필 보기', action: () => setProfileUser(ctxMenu.user) },
+            { label: '✏️  이름 설정 변경', action: () => { setRenameUser(ctxMenu.user); setRenameValue(displayNameOf(ctxMenu.user)); } },
+          ].map((item) => (
+            <button key={item.label}
+              onClick={() => { item.action(); setCtxMenu(null); }}
+              style={{
+                width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
+                background: 'transparent', borderRadius: '8px', cursor: 'pointer',
+                fontSize: '13.5px', fontWeight: 600, color: 'var(--t1)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >{item.label}</button>
+          ))}
+        </div>
+      )}
+
+      {/* 프로필 보기 모달 */}
+      {profileUser && (
+        <div onClick={() => setProfileUser(null)} style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--card)', borderRadius: '20px', width: '100%', maxWidth: '300px',
+            overflow: 'hidden', boxShadow: 'var(--shadow-lg)',
+          }}>
+            <div style={{ padding: '32px 24px 24px', textAlign: 'center', background: 'var(--blue-bg)' }}>
+              <div style={{ display: 'inline-block', marginBottom: '14px' }}>
+                <Avatar name={displayNameOf(profileUser)} size={96} src={profileUser.avatar_url} />
+              </div>
+              <p style={{ fontSize: '19px', fontWeight: 800, color: 'var(--t1)', marginBottom: '4px' }}>
+                {displayNameOf(profileUser)}
+              </p>
+              <p style={{ fontSize: '13px', color: profileUser.status === 'online' ? 'var(--green)' : 'var(--t3)', fontWeight: 600 }}>
+                {profileUser.status === 'online' ? '● 온라인' : '○ 오프라인'}
+              </p>
+              {profileUser.email && (
+                <p style={{ fontSize: '12px', color: 'var(--t3)', marginTop: '6px' }}>{profileUser.email}</p>
+              )}
+            </div>
+            <div style={{ padding: '14px', display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => { openChatWith(profileUser.id); setProfileUser(null); }}
+                style={{
+                  flex: 1, padding: '13px', borderRadius: '12px', border: 'none',
+                  background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '14px', cursor: 'pointer',
+                }}
+              >💬 채팅하기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이름 설정 변경 모달 */}
+      {renameUser && (
+        <div onClick={() => setRenameUser(null)} style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--card)', borderRadius: '20px', width: '100%', maxWidth: '320px',
+            padding: '24px', boxShadow: 'var(--shadow-lg)',
+          }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--t1)', marginBottom: '6px' }}>이름 설정 변경</h3>
+            <p style={{ fontSize: '12.5px', color: 'var(--t3)', marginBottom: '16px' }}>
+              나에게만 보이는 이름입니다 (원래 이름: {renameUser.name})
+            </p>
+            <input
+              type="text"
+              value={renameValue}
+              onChange={e => setRenameValue(e.target.value)}
+              placeholder={renameUser.name}
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') { saveNickname(renameUser.id, renameValue); setRenameUser(null); } }}
+              style={inputStyle}
+            />
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button
+                onClick={() => { saveNickname(renameUser.id, ''); setRenameUser(null); }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--line)',
+                  background: 'transparent', color: 'var(--t2)', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer',
+                }}
+              >원래대로</button>
+              <button
+                onClick={() => { saveNickname(renameUser.id, renameValue); setRenameUser(null); }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                  background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+                }}
+              >저장</button>
+            </div>
           </div>
         </div>
       )}
