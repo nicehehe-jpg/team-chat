@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'http://192.168.219.100:4000/api';
+const BASE_URL = 'https://team-chat-1vew.onrender.com/api';
 
 const api = axios.create({ baseURL: BASE_URL });
 
@@ -35,5 +35,5 @@ api.interceptors.response.use(
   }
 );
 
-export const BASE_SOCKET_URL = 'http://192.168.219.100:4000';
+export const BASE_SOCKET_URL = 'https://team-chat-1vew.onrender.com';
 export default api;

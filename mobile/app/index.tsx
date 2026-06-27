@@ -17,7 +17,7 @@ export default function Index() {
       }
       await fetchMe();
       const user = useAuthStore.getState().user;
-      router.replace(user ? '/rooms' : '/login');
+      router.replace(user ? '/(tabs)/friends' : '/login');
     })();
   }, []);
 

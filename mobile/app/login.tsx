@@ -20,7 +20,7 @@ export default function LoginScreen() {
       } else {
         await login(form.email, form.password);
       }
-      router.replace('/rooms');
+      router.replace('/(tabs)/friends');
     } catch (err: any) {
       Alert.alert('오류', err.response?.data?.message || '오류가 발생했습니다');
     }
