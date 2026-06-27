@@ -117,6 +117,7 @@ export default function RoomList() {
           <div style={{ display: 'flex', gap: '4px' }}>
             <button onClick={() => openModal('direct')} title="1:1 채팅" style={iconBtnStyle}>💬</button>
             <button onClick={() => openModal('group')} title="그룹 채팅" style={iconBtnStyle}>👥</button>
+            <button onClick={() => window.open('https://nicehehe-jpg.github.io/general-affiairs-for-soosan/', '_blank')} title="총무 관리 시스템" style={iconBtnStyle}>📋</button>
             <button onClick={logout} title="로그아웃" style={iconBtnStyle}>↩</button>
           </div>
         </div>
