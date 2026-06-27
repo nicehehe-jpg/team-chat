@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useChatStore } from '@/store/chatStore';
@@ -68,9 +68,20 @@ export default function RoomList() {
     await fetchMessages(roomId);
   };
 
+  const fetchUsers = async () => {
+    try {
+      const { data } = await api.get('/users');
+      setUsers(data);
+    } catch {}
+  };
+
+  // 마운트 시 팀원 목록 로드 (친구 탭 표시용)
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
   const openModal = async (type: ModalType) => {
-    const { data } = await api.get('/users');
-    setUsers(data);
+    await fetchUsers();
     setSelectedUsers([]);
     setGroupName('');
     setSearch('');
