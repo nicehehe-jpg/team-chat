@@ -34,8 +34,8 @@ function Avatar({ name, size = 44, color = 'var(--blue-bg)', textColor = 'var(--
 }
 
 export default function RoomList() {
-  const { rooms, activeRoomId, setActiveRoom, fetchMessages, createDirectRoom, createGroupRoom } = useChatStore();
-  const { user, logout, updateAvatar, updateStatusMessage } = useAuthStore();
+  const { rooms, activeRoomId, setActiveRoom, fetchMessages, createDirectRoom, createSelfRoom, createGroupRoom } = useChatStore();
+  const { user, logout, updateAvatar, updateStatusMessage, updateProfile } = useAuthStore();
   const [users, setUsers] = useState<any[]>([]);
   const [modal, setModal] = useState<ModalType>('none');
   const [groupName, setGroupName] = useState('');
@@ -49,6 +49,10 @@ export default function RoomList() {
   const [renameValue, setRenameValue] = useState('');
   const [editingStatus, setEditingStatus] = useState(false);
   const [statusValue, setStatusValue] = useState('');
+  const [showMyMenu, setShowMyMenu] = useState(false);
+  const [editProfile, setEditProfile] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editStatus, setEditStatus] = useState('');
   const [nicknames, setNicknames] = useState<Record<string, string>>({});
   const isMobile = useIsMobile();
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +79,13 @@ export default function RoomList() {
 
   const openChatWith = async (userId: string) => {
     const roomId = await createDirectRoom(userId);
+    await fetchMessages(roomId);
+    setActiveRoom(roomId);
+    setActiveTab('chat');
+  };
+
+  const openSelfChat = async () => {
+    const roomId = await createSelfRoom();
     await fetchMessages(roomId);
     setActiveRoom(roomId);
     setActiveTab('chat');
@@ -216,12 +227,42 @@ export default function RoomList() {
               {avatarUploading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>⏳</div>}
               <span style={{ position: 'absolute', bottom: 1, right: 1, width: '11px', height: '11px', borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--card)' }} />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
               <p
-                onClick={() => setProfileUser(user)}
-                title="내 프로필 보기"
+                onClick={() => setShowMyMenu(v => !v)}
+                title="내 프로필 메뉴"
                 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--t1)', marginBottom: '2px', cursor: 'pointer', display: 'inline-block' }}
-              >{user?.name}</p>
+              >{user?.name} ▾</p>
+
+              {/* 내 프로필 메뉴 */}
+              {showMyMenu && (
+                <>
+                  <div onClick={() => setShowMyMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 250 }} />
+                  <div style={{
+                    position: 'absolute', top: '24px', left: 0, zIndex: 260,
+                    background: 'var(--card)', borderRadius: '12px', padding: '6px',
+                    boxShadow: 'var(--shadow-lg)', border: '1px solid var(--line)', width: '150px',
+                  }}>
+                    {[
+                      { label: '💬  나와의 채팅', action: () => openSelfChat() },
+                      { label: '👤  프로필 보기', action: () => setProfileUser(user) },
+                      { label: '✏️  프로필 편집', action: () => { setEditName(user?.name || ''); setEditStatus(user?.status_message || ''); setEditProfile(true); } },
+                    ].map(item => (
+                      <button key={item.label}
+                        onClick={() => { item.action(); setShowMyMenu(false); }}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
+                          background: 'transparent', borderRadius: '8px', cursor: 'pointer',
+                          fontSize: '13.5px', fontWeight: 600, color: 'var(--t1)',
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >{item.label}</button>
+                    ))}
+                  </div>
+                </>
+              )}
+
               {editingStatus ? (
                 <input
                   autoFocus
@@ -329,7 +370,8 @@ export default function RoomList() {
         ) : (
           rooms.map((room) => {
             const other = room.members?.[0];
-            const displayName = room.type === 'direct' ? other?.name : room.name;
+            const isSelfRoom = room.type === 'direct' && (!room.members || room.members.length === 0);
+            const displayName = isSelfRoom ? `${user?.name} (나)` : (room.type === 'direct' ? other?.name : room.name);
             const isActive = activeRoomId === room.id;
             const lastContent = room.last_message?.type === 'image' ? '📷 사진' :
               room.last_message?.type === 'file' ? '📎 파일' :
@@ -355,7 +397,7 @@ export default function RoomList() {
                     color={room.type === 'group' ? '#EDE9FF' : 'var(--blue-bg)'}
                     textColor={room.type === 'group' ? '#6C5CE7' : 'var(--blue)'}
                     emoji={room.type === 'group' ? '👥' : undefined}
-                    src={room.type === 'direct' ? other?.avatar_url : undefined}
+                    src={isSelfRoom ? user?.avatar_url : (room.type === 'direct' ? other?.avatar_url : undefined)}
                   />
                   {room.type === 'direct' && other?.status === 'online' && (
                     <span style={{
@@ -593,6 +635,71 @@ export default function RoomList() {
                   }}
                 >💬 채팅하기</button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 내 프로필 편집 모달 */}
+      {editProfile && (
+        <div onClick={() => setEditProfile(false)} style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'var(--card)', borderRadius: '20px', width: '100%', maxWidth: '320px',
+            padding: '24px', boxShadow: 'var(--shadow-lg)',
+          }}>
+            <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--t1)', marginBottom: '18px', textAlign: 'center' }}>프로필 편집</h3>
+
+            {/* 사진 */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '18px' }}>
+              <div onClick={() => avatarInputRef.current?.click()} style={{ position: 'relative', cursor: 'pointer' }}>
+                <Avatar name={user?.name} size={84} src={user?.avatar_url} />
+                <span style={{
+                  position: 'absolute', bottom: 0, right: 0, width: '28px', height: '28px',
+                  borderRadius: '50%', background: 'var(--blue)', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px',
+                  border: '2px solid var(--card)',
+                }}>📷</span>
+              </div>
+            </div>
+
+            <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t3)' }}>이름</label>
+            <input
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              maxLength={20}
+              placeholder="이름"
+              style={{ ...inputStyle, marginTop: '4px', marginBottom: '12px' }}
+            />
+            <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--t3)' }}>상태메시지</label>
+            <input
+              value={editStatus}
+              onChange={e => setEditStatus(e.target.value)}
+              maxLength={60}
+              placeholder="상태메시지 입력"
+              style={{ ...inputStyle, marginTop: '4px' }}
+            />
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+              <button
+                onClick={() => setEditProfile(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid var(--line)',
+                  background: 'transparent', color: 'var(--t2)', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer',
+                }}
+              >취소</button>
+              <button
+                onClick={async () => {
+                  await updateProfile({ name: editName.trim() || undefined, status_message: editStatus });
+                  setEditProfile(false);
+                }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                  background: 'var(--blue)', color: '#fff', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+                }}
+              >저장</button>
             </div>
           </div>
         </div>

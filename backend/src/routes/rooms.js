@@ -1,12 +1,13 @@
 const router = require('express').Router();
 const auth = require('../middlewares/auth');
 const {
-  getRooms, createDirectRoom, createGroupRoom,
+  getRooms, createDirectRoom, createSelfRoom, createGroupRoom,
   getMessages, getRoomMembers, inviteMembers
 } = require('../controllers/roomController');
 
 router.get('/', auth, getRooms);
 router.post('/direct', auth, createDirectRoom);
+router.post('/self', auth, createSelfRoom);
 router.post('/group', auth, createGroupRoom);
 router.get('/:id/messages', auth, getMessages);
 router.get('/:id/members', auth, getRoomMembers);

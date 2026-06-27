@@ -70,6 +70,34 @@ async function createDirectRoom(req, res) {
   }
 }
 
+async function createSelfRoom(req, res) {
+  const myId = req.user.userId;
+  try {
+    // 나 혼자만 멤버인 direct 방 찾기
+    const { rows } = await pool.query(`
+      SELECT r.id FROM rooms r
+      JOIN room_members rm ON rm.room_id = r.id
+      WHERE r.type = 'direct'
+      GROUP BY r.id
+      HAVING COUNT(*) = 1 AND MAX(rm.user_id::text) = $1
+    `, [myId]);
+
+    if (rows.length) return res.json({ id: rows[0].id, existing: true });
+
+    const { rows: [room] } = await pool.query(
+      "INSERT INTO rooms (type) VALUES ('direct') RETURNING id"
+    );
+    await pool.query(
+      'INSERT INTO room_members (room_id, user_id) VALUES ($1,$2)',
+      [room.id, myId]
+    );
+    res.status(201).json({ id: room.id, type: 'direct', existing: false });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: '서버 오류' });
+  }
+}
+
 async function createGroupRoom(req, res) {
   const { name, memberIds } = req.body;
   const myId = req.user.userId;
@@ -163,4 +191,4 @@ async function inviteMembers(req, res) {
   }
 }
 
-module.exports = { getRooms, createDirectRoom, createGroupRoom, getMessages, getRoomMembers, inviteMembers };
+module.exports = { getRooms, createDirectRoom, createSelfRoom, createGroupRoom, getMessages, getRoomMembers, inviteMembers };

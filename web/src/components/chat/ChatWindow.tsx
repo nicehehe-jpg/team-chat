@@ -30,7 +30,8 @@ export default function ChatWindow() {
 
   const roomMessages = activeRoomId ? (messages[activeRoomId] || []) : [];
   const activeRoom = rooms.find(r => r.id === activeRoomId);
-  const displayName = activeRoom?.type === 'direct' ? activeRoom.members?.[0]?.name : activeRoom?.name;
+  const isSelfRoom = activeRoom?.type === 'direct' && (!activeRoom.members || activeRoom.members.length === 0);
+  const displayName = isSelfRoom ? `${user?.name} (나)` : (activeRoom?.type === 'direct' ? activeRoom.members?.[0]?.name : activeRoom?.name);
   const memberCount = (activeRoom?.members?.length || 0) + 1;
   const typingList = activeRoomId ? (typingUsers[activeRoomId] || []) : [];
 

@@ -31,6 +31,7 @@ interface ChatState {
   addMessage: (message: Message) => void;
   setTyping: (roomId: string, userId: string, isTyping: boolean) => void;
   createDirectRoom: (targetUserId: string) => Promise<string>;
+  createSelfRoom: () => Promise<string>;
   createGroupRoom: (name: string, memberIds: string[]) => Promise<string>;
   updateReadStatus: (roomId: string, userId: string, readAt: string) => void;
 }
@@ -83,6 +84,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   createDirectRoom: async (targetUserId) => {
     const { data } = await api.post('/rooms/direct', { targetUserId });
+    if (!data.existing) await get().fetchRooms();
+    return data.id;
+  },
+
+  createSelfRoom: async () => {
+    const { data } = await api.post('/rooms/self', {});
     if (!data.existing) await get().fetchRooms();
     return data.id;
   },
