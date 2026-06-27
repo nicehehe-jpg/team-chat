@@ -233,17 +233,30 @@ export default function RoomList() {
 
         {/* 탭 */}
         <div style={{ display: 'flex', gap: '0' }}>
-          {(['friends', 'chat'] as const).map((tab) => (
+          {(['friends', 'chat'] as const).map((tab) => {
+            const totalUnread = rooms.reduce((a, r) => a + (r.unread_count || 0), 0);
+            return (
             <button key={tab} onClick={() => { setActiveTab(tab); setListSearch(''); }} style={{
               flex: 1, padding: '10px 0', border: 'none', background: 'transparent',
               fontSize: '13.5px', fontWeight: 700, cursor: 'pointer',
               color: activeTab === tab ? 'var(--blue)' : 'var(--t3)',
               borderBottom: activeTab === tab ? '2px solid var(--blue)' : '2px solid transparent',
-              transition: 'all 0.15s',
+              transition: 'all 0.15s', position: 'relative',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
             }}>
               {tab === 'friends' ? '👤 친구' : '💬 채팅'}
+              {tab === 'chat' && totalUnread > 0 && (
+                <span style={{
+                  background: '#F04452', color: '#fff', fontSize: '11px', fontWeight: 800,
+                  borderRadius: '20px', minWidth: '18px', height: '18px', padding: '0 5px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {totalUnread > 99 ? '99+' : totalUnread}
+                </span>
+              )}
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 
