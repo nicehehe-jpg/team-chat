@@ -31,6 +31,16 @@ app.use('/api/upload', require('./routes/upload'));
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
+app.get('/health/db', async (_, res) => {
+  const pool = require('./config/db');
+  try {
+    const result = await pool.query('SELECT NOW() as time, COUNT(*) as users FROM users');
+    res.json({ status: 'ok', time: result.rows[0].time, users: result.rows[0].users });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 setupSocket(io);
 
 const PORT = process.env.PORT || 4000;
