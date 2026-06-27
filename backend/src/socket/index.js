@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
-const db = require('../config/db');
+const pool = require('../config/db');
 
 function setupSocket(io) {
   io.use((socket, next) => {
@@ -15,31 +14,43 @@ function setupSocket(io) {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const { userId } = socket;
 
-    db.prepare("UPDATE users SET status = 'online' WHERE id = ?").run(userId);
+    await pool.query("UPDATE users SET status = 'online' WHERE id = $1", [userId]);
     socket.broadcast.emit('user_online', { userId });
 
-    const rooms = db.prepare('SELECT room_id FROM room_members WHERE user_id = ?').all(userId);
-    rooms.forEach(({ room_id }) => socket.join(room_id));
+    const { rows } = await pool.query('SELECT room_id FROM room_members WHERE user_id = $1', [userId]);
+    rows.forEach(({ room_id }) => socket.join(room_id));
 
     socket.on('join_room', (roomId) => socket.join(roomId));
 
-    socket.on('send_message', ({ roomId, content, type = 'text' }) => {
+    socket.on('send_message', async ({ roomId, content, type = 'text' }) => {
       if (!roomId || !content?.trim()) return;
-      const member = db.prepare('SELECT 1 FROM room_members WHERE room_id = ? AND user_id = ?').get(roomId, userId);
-      if (!member) return;
+      try {
+        const { rows: [member] } = await pool.query(
+          'SELECT 1 FROM room_members WHERE room_id = $1 AND user_id = $2', [roomId, userId]
+        );
+        if (!member) return;
 
-      const id = uuidv4();
-      db.prepare('INSERT INTO messages (id, room_id, sender_id, content, type) VALUES (?, ?, ?, ?, ?)').run(id, roomId, userId, content.trim(), type);
-      const message = db.prepare('SELECT * FROM messages WHERE id = ?').get(id);
-      const sender = db.prepare('SELECT id, name, avatar_url FROM users WHERE id = ?').get(userId);
-      io.to(roomId).emit('new_message', { ...message, sender });
+        const { rows: [message] } = await pool.query(
+          'INSERT INTO messages (room_id, sender_id, content, type) VALUES ($1,$2,$3,$4) RETURNING *',
+          [roomId, userId, content.trim(), type]
+        );
+        const { rows: [sender] } = await pool.query(
+          'SELECT id, name, avatar_url FROM users WHERE id = $1', [userId]
+        );
+        io.to(roomId).emit('new_message', { ...message, sender });
+      } catch (err) {
+        console.error('send_message error:', err);
+      }
     });
 
-    socket.on('mark_read', (roomId) => {
-      db.prepare("UPDATE room_members SET last_read_at = datetime('now') WHERE room_id = ? AND user_id = ?").run(roomId, userId);
+    socket.on('mark_read', async (roomId) => {
+      await pool.query(
+        'UPDATE room_members SET last_read_at = NOW() WHERE room_id = $1 AND user_id = $2',
+        [roomId, userId]
+      );
       socket.to(roomId).emit('message_read', { roomId, userId, readAt: new Date().toISOString() });
     });
 
@@ -47,8 +58,8 @@ function setupSocket(io) {
       socket.to(roomId).emit('typing_indicator', { userId, roomId, isTyping });
     });
 
-    socket.on('disconnect', () => {
-      db.prepare("UPDATE users SET status = 'offline' WHERE id = ?").run(userId);
+    socket.on('disconnect', async () => {
+      await pool.query("UPDATE users SET status = 'offline' WHERE id = $1", [userId]);
       socket.broadcast.emit('user_offline', { userId });
     });
   });

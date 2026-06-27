@@ -1,32 +1,44 @@
-const db = require('../config/db');
+const pool = require('../config/db');
 
-function getUsers(req, res) {
+async function getUsers(req, res) {
   try {
-    const rows = db.prepare('SELECT id, email, name, avatar_url, status FROM users WHERE id != ? ORDER BY name').all(req.user.userId);
-    res.json(rows);
+    const result = await pool.query(
+      'SELECT id, email, name, avatar_url, status FROM users WHERE id != $1 ORDER BY name',
+      [req.user.userId]
+    );
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });
   }
 }
 
-function getMe(req, res) {
+async function getMe(req, res) {
   try {
-    const user = db.prepare('SELECT id, email, name, avatar_url, status, created_at FROM users WHERE id = ?').get(req.user.userId);
-    if (!user) return res.status(404).json({ message: '사용자를 찾을 수 없습니다' });
-    res.json(user);
+    const result = await pool.query(
+      'SELECT id, email, name, avatar_url, status, created_at FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+    if (!result.rows[0]) return res.status(404).json({ message: '사용자를 찾을 수 없습니다' });
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });
   }
 }
 
-function updateMe(req, res) {
+async function updateMe(req, res) {
   const { name, avatar_url } = req.body;
   try {
-    db.prepare('UPDATE users SET name = COALESCE(?, name), avatar_url = COALESCE(?, avatar_url) WHERE id = ?').run(name || null, avatar_url || null, req.user.userId);
-    const user = db.prepare('SELECT id, email, name, avatar_url, status FROM users WHERE id = ?').get(req.user.userId);
-    res.json(user);
+    const result = await pool.query(
+      `UPDATE users SET
+        name = COALESCE($1, name),
+        avatar_url = COALESCE($2, avatar_url)
+       WHERE id = $3
+       RETURNING id, email, name, avatar_url, status`,
+      [name || null, avatar_url || null, req.user.userId]
+    );
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: '서버 오류' });
