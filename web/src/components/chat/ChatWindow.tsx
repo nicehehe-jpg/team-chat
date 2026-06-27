@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { getSocket } from '@/lib/socket';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -14,8 +15,9 @@ const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 const API_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000';
 
 export default function ChatWindow() {
-  const { activeRoomId, messages, rooms, typingUsers } = useChatStore();
+  const { activeRoomId, messages, rooms, typingUsers, setActiveRoom } = useChatStore();
   const { user } = useAuthStore();
+  const isMobile = useIsMobile();
   const [input, setInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -129,7 +131,12 @@ export default function ChatWindow() {
   }
 
   return (
-    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
+    <main style={{
+      flex: 1, display: 'flex', flexDirection: 'column',
+      background: 'var(--bg)', overflow: 'hidden',
+      height: isMobile ? '100dvh' : undefined,
+      paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
+    }}>
       {/* 헤더 */}
       <div style={{
         padding: '14px 24px', background: 'var(--card)',
@@ -137,6 +144,18 @@ export default function ChatWindow() {
         display: 'flex', alignItems: 'center', gap: '12px',
         boxShadow: 'var(--shadow-sm)',
       }}>
+        {isMobile && (
+          <button
+            onClick={() => setActiveRoom(null)}
+            title="목록으로"
+            style={{
+              flexShrink: 0, width: '32px', height: '32px', border: 'none',
+              background: 'transparent', cursor: 'pointer', fontSize: '22px',
+              color: 'var(--t1)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginLeft: '-8px',
+            }}
+          >‹</button>
+        )}
         <div style={{
           width: '40px', height: '40px', borderRadius: '12px', flexShrink: 0,
           background: activeRoom?.type === 'group' ? '#EDE9FF' : 'var(--blue-bg)',
@@ -266,7 +285,10 @@ export default function ChatWindow() {
       </div>
 
       {/* 입력창 */}
-      <div style={{ background: 'var(--card)', borderTop: '1px solid var(--line)', position: 'relative' }}>
+      <div style={{
+        background: 'var(--card)', borderTop: '1px solid var(--line)', position: 'relative',
+        paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0,
+      }}>
 
         {/* 이모지 피커 팝업 */}
         {showEmoji && (

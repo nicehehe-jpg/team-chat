@@ -4,13 +4,15 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStore } from '@/store/chatStore';
 import { useSocket } from '@/hooks/useSocket';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import RoomList from '@/components/chat/RoomList';
 import ChatWindow from '@/components/chat/ChatWindow';
 
 export default function HomePage() {
   const { user, fetchMe, isLoading } = useAuthStore();
-  const { fetchRooms } = useChatStore();
+  const { fetchRooms, activeRoomId } = useChatStore();
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   useSocket();
 
@@ -45,6 +47,16 @@ export default function HomePage() {
     );
   }
 
+  // 모바일: 한 번에 한 화면만 (목록 또는 대화창)
+  if (isMobile) {
+    return (
+      <div style={{ height: '100dvh', overflow: 'hidden' }}>
+        {activeRoomId ? <ChatWindow /> : <RoomList />}
+      </div>
+    );
+  }
+
+  // 데스크탑: 2단 레이아웃
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <RoomList />

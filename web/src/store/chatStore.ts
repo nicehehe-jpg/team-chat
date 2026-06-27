@@ -26,7 +26,7 @@ interface ChatState {
   messages: Record<string, Message[]>;
   typingUsers: Record<string, string[]>;
   fetchRooms: () => Promise<void>;
-  setActiveRoom: (roomId: string) => void;
+  setActiveRoom: (roomId: string | null) => void;
   fetchMessages: (roomId: string) => Promise<void>;
   addMessage: (message: Message) => void;
   setTyping: (roomId: string, userId: string, isTyping: boolean) => void;

@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import api from '@/lib/api';
 
 type ModalType = 'none' | 'direct' | 'group';
@@ -42,6 +43,7 @@ export default function RoomList() {
   const [search, setSearch] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'friends' | 'chat'>('friends');
+  const isMobile = useIsMobile();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,9 +103,10 @@ export default function RoomList() {
 
   return (
     <aside style={{
-      width: '300px', flexShrink: 0, background: 'var(--card)',
-      borderRight: '1px solid var(--line)', display: 'flex',
-      flexDirection: 'column', height: '100vh',
+      width: isMobile ? '100%' : '300px', flexShrink: 0, background: 'var(--card)',
+      borderRight: isMobile ? 'none' : '1px solid var(--line)', display: 'flex',
+      flexDirection: 'column', height: isMobile ? '100dvh' : '100vh',
+      paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
     }}>
       {/* 상단 헤더 */}
       <div style={{ padding: '20px 20px 0', borderBottom: '1px solid var(--line)' }}>
